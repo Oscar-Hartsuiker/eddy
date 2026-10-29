@@ -1,0 +1,66 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "eddy",
+  "version": "0.1.0",
+  "identifier": "com.eddy.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "eddy",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 880,
+        "minHeight": 560,
+        "center": true,
+        "resizable": true,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Photography",
+    "shortDescription": "A simple, modern, minimalist photo editor",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["png"],
+        "name": "PNG image",
+        "description": "PNG image",
+        "mimeType": "image/png",
+        "role": "Editor"
+      },
+      {
+        "ext": ["jpg", "jpeg"],
+        "name": "JPEG image",
+        "description": "JPEG image",
+        "mimeType": "image/jpeg",
+        "role": "Editor"
+      },
+      {
+        "ext": ["webp"],
+        "name": "WebP image",
+        "description": "WebP image",
+        "mimeType": "image/webp",
+        "role": "Editor"
+      }
+    ]
+  }
+}
