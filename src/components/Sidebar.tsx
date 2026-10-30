@@ -8,8 +8,8 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import type { Adjustments, Curve } from "../types";
-import { DEFAULT_ADJUSTMENTS, DEFAULT_CURVE } from "../types";
+import type { Adjustments, CropRatioId, Curve } from "../types";
+import { CROP_RATIOS, DEFAULT_ADJUSTMENTS, DEFAULT_CURVE } from "../types";
 import { Slider } from "./Slider";
 import { CurveEditor } from "./CurveEditor";
 
@@ -19,12 +19,14 @@ interface SidebarProps {
   curve: Curve;
   cropMode: boolean;
   hasCrop: boolean;
+  cropRatioId: CropRatioId;
   zoom: number;
   onAdjust: (key: keyof Adjustments, value: number) => void;
   onCurveChange: (curve: Curve) => void;
   onResetAdjustments: () => void;
   onResetCurve: () => void;
   onEnterCrop: () => void;
+  onCropRatioChange: (id: CropRatioId) => void;
   onRotate: (direction: "cw" | "ccw") => void;
   onFlip: (axis: "h" | "v") => void;
   onZoomIn: () => void;
@@ -41,12 +43,14 @@ export function Sidebar({
   curve,
   cropMode,
   hasCrop,
+  cropRatioId,
   zoom,
   onAdjust,
   onCurveChange,
   onResetAdjustments,
   onResetCurve,
   onEnterCrop,
+  onCropRatioChange,
   onRotate,
   onFlip,
   onZoomIn,
@@ -185,6 +189,36 @@ export function Sidebar({
               <span>Flip V</span>
             </button>
           </div>
+
+          {cropMode && (
+            <div className="ratio-block">
+              <div className="ratio-head">
+                <span>Aspect ratio</span>
+              </div>
+              <div className="ratio-grid">
+                {CROP_RATIOS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={
+                      cropRatioId === option.id ? "ratio-chip is-active" : "ratio-chip"
+                    }
+                    onClick={() => onCropRatioChange(option.id)}
+                    disabled={disabled}
+                    title={
+                      option.id === "original"
+                        ? "Match the image's orientation"
+                        : option.id === "free"
+                          ? "Any shape"
+                          : `Crop to ${option.label}`
+                    }
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="panel">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { CropRect } from "../types";
+import { cropRectFromDrag, moveCropRect } from "../image/crop";
 
 interface CanvasStageProps {
   preview: HTMLCanvasElement | null;
@@ -11,6 +12,8 @@ interface CanvasStageProps {
   cropMode: boolean;
   crop: CropRect | null;
   cropSpace: { w: number; h: number };
+  /** Width / height in image pixels, or null for free-form. */
+  cropRatio: number | null;
   loading: boolean;
   showOriginal: boolean;
   onViewportChange: (width: number, height: number) => void;
@@ -26,6 +29,17 @@ interface CanvasStageProps {
 const MIN_ZOOM = 0.02;
 const MAX_ZOOM = 16;
 
+/** Screen pixels of slack when hit-testing the selection for a move drag. */
+const MOVE_HIT_SLOP = 6;
+
+/** Screen pixels of slack when hit-testing a corner resize handle. */
+const CORNER_HIT_SLOP = 10;
+
+type CropDrag =
+  | { mode: "new"; start: { x: number; y: number } }
+  | { mode: "move"; start: { x: number; y: number }; rect: CropRect }
+  | { mode: "resize"; anchor: { x: number; y: number } };
+
 export function CanvasStage({
   preview,
   width,
@@ -35,6 +49,7 @@ export function CanvasStage({
   cropMode,
   crop,
   cropSpace,
+  cropRatio,
   loading,
   showOriginal,
   onViewportChange,
@@ -50,7 +65,23 @@ export function CanvasStage({
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(
     null,
   );
-  const cropStart = useRef<{ x: number; y: number } | null>(null);
+  const cropDrag = useRef<CropDrag | null>(null);
+
+  // The crop overlay lives on the image element, not the viewport: the image
+  // is centered and panned, so pointer coords must be mapped against the
+  // image's own box or the selection starts in the wrong place.
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const toImagePoint = useCallback((clientX: number, clientY: number) => {
+    const el = wrapRef.current;
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return null;
+    return {
+      x: (clientX - r.left) / r.width,
+      y: (clientY - r.top) / r.height,
+    };
+  }, []);
 
   // Track viewport size so the app can compute a "fit" zoom.
   useEffect(() => {
@@ -106,12 +137,49 @@ export function CanvasStage({
       target.setPointerCapture(e.pointerId);
 
       if (cropMode) {
-        const rect = target.getBoundingClientRect();
-        const p = {
-          x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
-          y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
-        };
-        cropStart.current = p;
+        const p = toImagePoint(e.clientX, e.clientY);
+        // Only start a selection from inside the image itself.
+        if (!p || p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return;
+
+        // Pressing inside an existing selection drags it instead of
+        // redrawing; slop is a few on-screen pixels.
+        const slopX = MOVE_HIT_SLOP / Math.max(1, width * zoom);
+        const slopY = MOVE_HIT_SLOP / Math.max(1, height * zoom);
+        if (crop && crop.w > 1 && crop.h > 1) {
+          const nx = crop.x / cropSpace.w;
+          const ny = crop.y / cropSpace.h;
+          const nw = crop.w / cropSpace.w;
+          const nh = crop.h / cropSpace.h;
+
+          // Corner handles resize; the opposite corner stays pinned.
+          const cornerX = CORNER_HIT_SLOP / Math.max(1, width * zoom);
+          const cornerY = CORNER_HIT_SLOP / Math.max(1, height * zoom);
+          const corners: { cx: number; cy: number; anchor: { x: number; y: number } }[] = [
+            { cx: nx, cy: ny, anchor: { x: nx + nw, y: ny + nh } },
+            { cx: nx + nw, cy: ny, anchor: { x: nx, y: ny + nh } },
+            { cx: nx, cy: ny + nh, anchor: { x: nx + nw, y: ny } },
+            { cx: nx + nw, cy: ny + nh, anchor: { x: nx, y: ny } },
+          ];
+          const corner = corners.find(
+            (c) => Math.abs(p.x - c.cx) <= cornerX && Math.abs(p.y - c.cy) <= cornerY,
+          );
+          if (corner) {
+            cropDrag.current = { mode: "resize", anchor: corner.anchor };
+            return;
+          }
+
+          if (
+            p.x >= nx - slopX &&
+            p.x <= nx + nw + slopX &&
+            p.y >= ny - slopY &&
+            p.y <= ny + nh + slopY
+          ) {
+            cropDrag.current = { mode: "move", start: p, rect: crop };
+            return;
+          }
+        }
+
+        cropDrag.current = { mode: "new", start: p };
         onCropChange({
           x: p.x * cropSpace.w,
           y: p.y * cropSpace.h,
@@ -123,29 +191,57 @@ export function CanvasStage({
 
       panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
     },
-    [cropMode, cropSpace.h, cropSpace.w, onCropChange, pan.x, pan.y],
+    [
+      crop,
+      cropMode,
+      cropSpace.h,
+      cropSpace.w,
+      height,
+      onCropChange,
+      pan.x,
+      pan.y,
+      toImagePoint,
+      width,
+      zoom,
+    ],
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
       if (cropMode) {
-        const start = cropStart.current;
-        if (!start) return;
-        const rect = e.currentTarget.getBoundingClientRect();
+        const drag = cropDrag.current;
+        if (!drag) return;
+        const raw = toImagePoint(e.clientX, e.clientY);
+        if (!raw) return;
         const cur = {
-          x: Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width)),
-          y: Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height)),
+          x: Math.min(1, Math.max(0, raw.x)),
+          y: Math.min(1, Math.max(0, raw.y)),
         };
-        const nx = Math.min(start.x, cur.x);
-        const ny = Math.min(start.y, cur.y);
-        const nw = Math.abs(cur.x - start.x);
-        const nh = Math.abs(cur.y - start.y);
-        onCropChange({
-          x: nx * cropSpace.w,
-          y: ny * cropSpace.h,
-          w: nw * cropSpace.w,
-          h: nh * cropSpace.h,
-        });
+
+        if (drag.mode === "new") {
+          onCropChange(cropRectFromDrag(drag.start, cur, cropSpace, cropRatio));
+          return;
+        }
+
+        if (drag.mode === "resize") {
+          // The anchor is the opposite corner, so it stays pinned while the
+          // dragged corner resizes — same math as drawing a fresh box.
+          onCropChange(cropRectFromDrag(drag.anchor, cur, cropSpace, cropRatio));
+          return;
+        }
+
+        // Moving keeps the size (and therefore the ratio) and clamps to the
+        // image so the selection can never end up half outside.
+        onCropChange(
+          moveCropRect(
+            drag.rect,
+            {
+              dx: (cur.x - drag.start.x) * cropSpace.w,
+              dy: (cur.y - drag.start.y) * cropSpace.h,
+            },
+            cropSpace,
+          ),
+        );
         return;
       }
 
@@ -156,17 +252,19 @@ export function CanvasStage({
         y: start.panY + (e.clientY - start.y),
       });
     },
-    [cropMode, cropSpace.h, cropSpace.w, onCropChange, onPanChange],
+    [cropMode, cropRatio, cropSpace, onCropChange, onPanChange, toImagePoint],
   );
 
   const handlePointerUp = useCallback(() => {
-    cropStart.current = null;
+    cropDrag.current = null;
     panStart.current = null;
   }, []);
 
   const displayW = width * zoom;
   const displayH = height * zoom;
   const hasCrop = !!crop && crop.w > 1 && crop.h > 1;
+  // Corner handles are a constant size on screen regardless of zoom.
+  const handleSize = 9 * (cropSpace.w / Math.max(1, displayW));
 
   return (
     <div
@@ -183,6 +281,7 @@ export function CanvasStage({
       {showOriginal && <div className="stage-badge">Original</div>}
 
       <div
+        ref={wrapRef}
         className="stage-canvas-wrap"
         style={{
           width: `${displayW}px`,
@@ -264,6 +363,23 @@ export function CanvasStage({
                     />
                   </g>
                 ))}
+                {[
+                  { x: crop!.x, y: crop!.y },
+                  { x: crop!.x + crop!.w, y: crop!.y },
+                  { x: crop!.x, y: crop!.y + crop!.h },
+                  { x: crop!.x + crop!.w, y: crop!.y + crop!.h },
+                ].map((corner, i) => (
+                  <rect
+                    key={i}
+                    className="crop-handle"
+                    x={corner.x - handleSize / 2}
+                    y={corner.y - handleSize / 2}
+                    width={handleSize}
+                    height={handleSize}
+                    rx={handleSize * 0.22}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))}
               </g>
             )}
           </svg>
@@ -296,7 +412,7 @@ export function CanvasStage({
 
       {cropMode && (
         <div className="stage-hint" style={{ pointerEvents: "none" }}>
-          Drag on the image to choose an area
+          Drag to select · drag a corner to resize · drag inside to move
         </div>
       )}
 

@@ -19,13 +19,15 @@ you save.
 shape it, click empty space to add a point, middle-click or double-click a
 point to remove it. The black and white points stay pinned to the edges.
 
-**Transform** — Crop (drag a region, rule-of-thirds overlay), rotate 90° either
-direction, flip horizontally or vertically.
+**Transform** — Crop: drag a region, drag a corner handle to resize it, drag
+inside it to move it around, and pick an aspect ratio preset (Free / Orig /
+1:1 / 5:4 / 4:3 / 3:2 / 16:9 and their portrait variants). Rule-of-thirds
+overlay, rotate 90° either direction, flip horizontally or vertically.
 
 **View** — Wheel to zoom at the cursor, drag to pan, double-click to toggle
 fit/100%, zoom in/out/fit controls in the sidebar.
 
-**Saving**
+**Shortcuts**
 | Shortcut | Action |
 | --- | --- |
 | `Ctrl/Cmd + S` | Save, overwriting the original file |
@@ -69,6 +71,17 @@ sudo apt install -y build-essential pkg-config libwebkit2gtk-4.1-dev \
 npm install
 npm run app        # tauri dev
 ```
+
+### Test
+
+```bash
+npm test
+```
+
+Bundles `tests/*.test.ts` with esbuild (already a vite dependency) and runs
+them: crop geometry (selection starts at the click, ratio lock, moving and
+clamping) and the per-pixel adjustment pipeline (regression check for the
+fractional LUT indexing bug).
 
 ### Build
 

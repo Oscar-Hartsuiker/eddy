@@ -579,6 +579,59 @@ button {
   height: 32px;
 }
 
+/* ------------------------------------------------------------- crop ratios */
+
+.ratio-block {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.ratio-head {
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 620;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ratio-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+}
+
+.ratio-chip {
+  height: 27px;
+  padding: 0 4px;
+  border-radius: 6px;
+  border: 1px solid var(--border-soft);
+  background: var(--panel-soft);
+  color: var(--text-dim);
+  font-size: 10.5px;
+  font-weight: 540;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.ratio-chip:hover:not(:disabled) {
+  background: var(--panel-raised);
+  color: var(--text);
+  border-color: #2c323b;
+}
+
+.ratio-chip.is-active {
+  background: var(--accent-soft);
+  border-color: rgba(106, 166, 255, 0.4);
+  color: var(--accent-strong);
+}
+
+.ratio-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* ------------------------------------------------------------ sidebar foot */
 
 .sidebar-footer {
@@ -756,6 +809,12 @@ button {
 .crop-grid line {
   stroke: rgba(255, 255, 255, 0.35);
   stroke-width: 0.75;
+}
+
+.crop-handle {
+  fill: rgba(255, 255, 255, 0.96);
+  stroke: rgba(12, 14, 17, 0.8);
+  stroke-width: 1.5;
 }
 
 .crop-actions {

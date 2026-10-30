@@ -27,6 +27,92 @@ export interface CropRect {
   h: number;
 }
 
+export type CropRatioId =
+  | "free"
+  | "original"
+  | "1:1"
+  | "5:4"
+  | "4:3"
+  | "3:2"
+  | "16:9"
+  | "9:16"
+  | "3:4"
+  | "2:3";
+
+export interface CropRatioOption {
+  id: CropRatioId;
+  label: string;
+}
+
+export const CROP_RATIOS: CropRatioOption[] = [
+  { id: "free", label: "Free" },
+  { id: "original", label: "Orig" },
+  { id: "1:1", label: "1:1" },
+  { id: "5:4", label: "5:4" },
+  { id: "4:3", label: "4:3" },
+  { id: "3:2", label: "3:2" },
+  { id: "16:9", label: "16:9" },
+  { id: "3:4", label: "3:4" },
+  { id: "2:3", label: "2:3" },
+  { id: "9:16", label: "9:16" },
+];
+
+const PARSE_RATIO: Record<CropRatioId, number | null> = {
+  free: null,
+  "1:1": 1,
+  "5:4": 5 / 4,
+  "4:3": 4 / 3,
+  "3:2": 3 / 2,
+  "16:9": 16 / 9,
+  "9:16": 9 / 16,
+  "3:4": 3 / 4,
+  "2:3": 2 / 3,
+  original: null, // resolved from the image dimensions
+};
+
+/** Aspect ratio (width / height in image pixels) for a preset. `null` = free. */
+export function cropRatioValue(id: CropRatioId, space: { w: number; h: number }): number | null {
+  if (id === "original") return space.h > 0 ? space.w / space.h : null;
+  return PARSE_RATIO[id] ?? null;
+}
+
+/**
+ * Refit a crop rectangle to a ratio.
+ * `keepCenter` anchors on the center (used by "reset"), otherwise the
+ * rectangle keeps its top-left corner and only shrinks to fit.
+ */
+export function fitCropToRatio(
+  rect: CropRect,
+  space: { w: number; h: number },
+  ratio: number | null,
+  keepCenter = false,
+): CropRect {
+  if (!ratio || space.w <= 0 || space.h <= 0) return rect;
+
+  const maxW = Math.min(rect.w, space.w);
+  const maxH = Math.min(rect.h, space.h);
+  if (maxW <= 0 || maxH <= 0) return rect;
+
+  // Largest box of the given ratio (w/h in image pixels) that fits.
+  let w = maxW;
+  let h = w / ratio;
+  if (h > maxH) {
+    h = maxH;
+    w = h * ratio;
+  }
+
+  let x = rect.x;
+  let y = rect.y;
+  if (keepCenter) {
+    x = rect.x + (rect.w - w) / 2;
+    y = rect.y + (rect.h - h) / 2;
+  }
+
+  x = Math.max(0, Math.min(space.w - w, x));
+  y = Math.max(0, Math.min(space.h - h, y));
+  return { x, y, w, h };
+}
+
 export interface ImageDoc {
   path: string | null;
   name: string;

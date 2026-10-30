@@ -15,9 +15,12 @@ import {
   formatFromMime,
   outputSize,
   transformedSize,
+  cropRatioValue,
+  fitCropToRatio,
 } from "./types";
 import type {
   Adjustments,
+  CropRatioId,
   CropRect,
   Curve,
   ImageDoc,
@@ -78,6 +81,7 @@ export default function App() {
 
   const [cropMode, setCropMode] = useState(false);
   const [cropDraft, setCropDraft] = useState<CropRect | null>(null);
+  const [cropRatioId, setCropRatioId] = useState<CropRatioId>("free");
 
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -465,6 +469,10 @@ export default function App() {
   // ---------------------------------------------------------------------------
 
   const cropSpace = useMemo(() => transformedSize(doc, transform), [doc, transform]);
+  const cropRatio = useMemo(() => cropRatioValue(cropRatioId, cropSpace), [
+    cropRatioId,
+    cropSpace,
+  ]);
   const output = useMemo(() => outputSize(doc, transform, crop), [doc, transform, crop]);
   const displaySize = showOriginal
     ? { w: doc?.width ?? 0, h: doc?.height ?? 0 }
@@ -603,11 +611,11 @@ export default function App() {
       originalRef.current = false;
       setShowOriginal(false);
     }
-    setCropDraft(crop);
+    setCropDraft(crop ? fitCropToRatio(crop, cropSpace, cropRatio) : crop);
     setCropMode(true);
     setZoomMode("fit");
     setPan({ x: 0, y: 0 });
-  }, [crop]);
+  }, [crop, cropRatio, cropSpace]);
 
   const cancelCrop = useCallback(() => {
     setCropMode(false);
@@ -615,16 +623,29 @@ export default function App() {
     setZoomMode("fit");
   }, []);
 
+  const changeCropRatio = useCallback(
+    (id: CropRatioId) => {
+      setCropRatioId(id);
+      const ratio = cropRatioValue(id, cropSpace);
+      setCropDraft((prev) =>
+        prev && ratio ? fitCropToRatio(prev, cropSpace, ratio, true) : prev,
+      );
+    },
+    [cropSpace],
+  );
+
   const resetCropDraft = useCallback(() => {
-    setCropDraft({ x: 0, y: 0, w: cropSpace.w, h: cropSpace.h });
-  }, [cropSpace.h, cropSpace.w]);
+    const full: CropRect = { x: 0, y: 0, w: cropSpace.w, h: cropSpace.h };
+    setCropDraft(fitCropToRatio(full, cropSpace, cropRatio));
+  }, [cropRatio, cropSpace.h, cropSpace.w]);
 
   const applyCrop = useCallback(() => {
     if (!cropDraft || !doc) return;
-    const x = Math.max(0, Math.round(cropDraft.x));
-    const y = Math.max(0, Math.round(cropDraft.y));
-    const w = Math.min(cropSpace.w - x, Math.round(cropDraft.w));
-    const h = Math.min(cropSpace.h - y, Math.round(cropDraft.h));
+    const draft = fitCropToRatio(cropDraft, cropSpace, cropRatio);
+    const x = Math.max(0, Math.round(draft.x));
+    const y = Math.max(0, Math.round(draft.y));
+    const w = Math.min(cropSpace.w - x, Math.round(draft.w));
+    const h = Math.min(cropSpace.h - y, Math.round(draft.h));
     if (w < 2 || h < 2) return;
 
     const isFull = x === 0 && y === 0 && w === cropSpace.w && h === cropSpace.h;
@@ -641,8 +662,8 @@ export default function App() {
   }, [
     adjustments,
     cropDraft,
-    cropSpace.h,
-    cropSpace.w,
+    cropRatio,
+    cropSpace,
     curve,
     doc,
     scheduleCommit,
@@ -894,6 +915,7 @@ export default function App() {
             cropMode={cropMode}
             crop={cropMode ? cropDraft : crop}
             cropSpace={cropSpace}
+            cropRatio={cropRatio}
             loading={loading}
             showOriginal={showOriginal}
             onViewportChange={handleViewportChange}
@@ -919,12 +941,14 @@ export default function App() {
           curve={curve}
           cropMode={cropMode}
           hasCrop={crop !== null}
+          cropRatioId={cropRatioId}
           zoom={zoom}
           onAdjust={adjust}
           onCurveChange={changeCurve}
           onResetAdjustments={resetAdjustments}
           onResetCurve={resetCurve}
           onEnterCrop={enterCrop}
+          onCropRatioChange={changeCropRatio}
           onRotate={rotate}
           onFlip={flip}
           onZoomIn={zoomIn}
