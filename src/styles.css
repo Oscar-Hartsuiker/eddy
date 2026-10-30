@@ -60,6 +60,16 @@ button {
   min-height: 0;
 }
 
+/* Column under the workspace: the stage on top, zoom controls at the very
+   bottom, aligned with the sidebar's footer row. */
+.stage-column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
 /* ------------------------------------------------------------------ topbar */
 
 .topbar {
@@ -313,12 +323,6 @@ button {
   color: var(--text-muted);
 }
 
-.panel-note {
-  font-size: 10.5px;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
 /* ------------------------------------------------------------------ sliders */
 
 .sliders {
@@ -535,11 +539,6 @@ button {
   gap: 6px;
 }
 
-.tool-row {
-  display: flex;
-  gap: 6px;
-}
-
 .tool {
   display: flex;
   align-items: center;
@@ -574,9 +573,52 @@ button {
   cursor: default;
 }
 
-.tool.compact {
-  flex: 1;
-  height: 32px;
+/* ---------------------------------------------------------------- zoom bar */
+
+.zoombar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  height: 40px;
+  flex: 0 0 40px;
+  padding: 0 14px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--panel);
+}
+
+.zoombar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.zoombar-value {
+  margin-left: 6px;
+  min-width: 44px;
+  font-size: 12px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+}
+
+.zoombar-value.is-muted {
+  color: var(--text-muted);
+}
+
+.zoombar-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1040px) {
+  .zoombar-hint {
+    display: none;
+  }
 }
 
 /* ------------------------------------------------------------- crop ratios */
@@ -724,20 +766,6 @@ button {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-.stage-zoom {
-  position: absolute;
-  right: 14px;
-  bottom: 12px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: rgba(12, 14, 17, 0.78);
-  border: 1px solid var(--border-soft);
-  color: var(--text-muted);
-  font-size: 10.5px;
-  font-variant-numeric: tabular-nums;
-  backdrop-filter: blur(6px);
 }
 
 .stage-loading {

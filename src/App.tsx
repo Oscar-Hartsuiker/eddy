@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { TopBar } from "./components/TopBar";
 import { Sidebar } from "./components/Sidebar";
 import { CanvasStage } from "./components/CanvasStage";
+import { ZoomBar } from "./components/ZoomBar";
 import { EmptyState } from "./components/EmptyState";
 import {
   DEFAULT_ADJUSTMENTS,
@@ -905,35 +906,45 @@ export default function App() {
       />
 
       <div className="workspace">
-        {doc ? (
-          <CanvasStage
-            preview={preview}
-            width={displaySize.w}
-            height={displaySize.h}
+        <div className="stage-column">
+          {doc ? (
+            <CanvasStage
+              preview={preview}
+              width={displaySize.w}
+              height={displaySize.h}
+              zoom={zoom}
+              pan={pan}
+              cropMode={cropMode}
+              crop={cropMode ? cropDraft : crop}
+              cropSpace={cropSpace}
+              cropRatio={cropRatio}
+              loading={loading}
+              showOriginal={showOriginal}
+              onViewportChange={handleViewportChange}
+              onZoomAt={handleZoomAt}
+              onPanChange={setPan}
+              onCropChange={setCropDraft}
+              onApplyCrop={applyCrop}
+              onCancelCrop={cancelCrop}
+              onResetCrop={resetCropDraft}
+              onToggleFit={toggleFit}
+            />
+          ) : (
+            <EmptyState
+              onOpen={() => void openImage()}
+              onDropFile={(file) => void loadBrowserFile(file)}
+              isTauri={tauri}
+            />
+          )}
+
+          <ZoomBar
+            disabled={!doc}
             zoom={zoom}
-            pan={pan}
-            cropMode={cropMode}
-            crop={cropMode ? cropDraft : crop}
-            cropSpace={cropSpace}
-            cropRatio={cropRatio}
-            loading={loading}
-            showOriginal={showOriginal}
-            onViewportChange={handleViewportChange}
-            onZoomAt={handleZoomAt}
-            onPanChange={setPan}
-            onCropChange={setCropDraft}
-            onApplyCrop={applyCrop}
-            onCancelCrop={cancelCrop}
-            onResetCrop={resetCropDraft}
-            onToggleFit={toggleFit}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onZoomFit={zoomFit}
           />
-        ) : (
-          <EmptyState
-            onOpen={() => void openImage()}
-            onDropFile={(file) => void loadBrowserFile(file)}
-            isTauri={tauri}
-          />
-        )}
+        </div>
 
         <Sidebar
           disabled={!doc}
@@ -942,7 +953,6 @@ export default function App() {
           cropMode={cropMode}
           hasCrop={crop !== null}
           cropRatioId={cropRatioId}
-          zoom={zoom}
           onAdjust={adjust}
           onCurveChange={changeCurve}
           onResetAdjustments={resetAdjustments}
@@ -951,9 +961,6 @@ export default function App() {
           onCropRatioChange={changeCropRatio}
           onRotate={rotate}
           onFlip={flip}
-          onZoomIn={zoomIn}
-          onZoomOut={zoomOut}
-          onZoomFit={zoomFit}
         />
       </div>
     </div>

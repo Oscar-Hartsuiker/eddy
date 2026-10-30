@@ -25,7 +25,8 @@ inside it to move it around, and pick an aspect ratio preset (Free / Orig /
 overlay, rotate 90° either direction, flip horizontally or vertically.
 
 **View** — Wheel to zoom at the cursor, drag to pan, double-click to toggle
-fit/100%, zoom in/out/fit controls in the sidebar.
+fit/100%, with zoom in / fit / out controls in the bar along the bottom of
+the window.
 
 **Shortcuts**
 | Shortcut | Action |

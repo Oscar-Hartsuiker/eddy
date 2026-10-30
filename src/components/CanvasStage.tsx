@@ -415,10 +415,6 @@ export function CanvasStage({
           Drag to select · drag a corner to resize · drag inside to move
         </div>
       )}
-
-      <div className="stage-zoom" style={{ pointerEvents: "none" }}>
-        {Math.round(zoom * 100)}%
-      </div>
     </div>
   );
 }

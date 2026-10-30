@@ -2,11 +2,8 @@ import {
   Crop,
   FlipHorizontal2,
   FlipVertical2,
-  Maximize,
   RotateCw,
   Undo2,
-  ZoomIn,
-  ZoomOut,
 } from "lucide-react";
 import type { Adjustments, CropRatioId, Curve } from "../types";
 import { CROP_RATIOS, DEFAULT_ADJUSTMENTS, DEFAULT_CURVE } from "../types";
@@ -20,7 +17,6 @@ interface SidebarProps {
   cropMode: boolean;
   hasCrop: boolean;
   cropRatioId: CropRatioId;
-  zoom: number;
   onAdjust: (key: keyof Adjustments, value: number) => void;
   onCurveChange: (curve: Curve) => void;
   onResetAdjustments: () => void;
@@ -29,9 +25,6 @@ interface SidebarProps {
   onCropRatioChange: (id: CropRatioId) => void;
   onRotate: (direction: "cw" | "ccw") => void;
   onFlip: (axis: "h" | "v") => void;
-  onZoomIn: () => void;
-  onZoomOut: () => void;
-  onZoomFit: () => void;
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}`;
@@ -44,7 +37,6 @@ export function Sidebar({
   cropMode,
   hasCrop,
   cropRatioId,
-  zoom,
   onAdjust,
   onCurveChange,
   onResetAdjustments,
@@ -53,9 +45,6 @@ export function Sidebar({
   onCropRatioChange,
   onRotate,
   onFlip,
-  onZoomIn,
-  onZoomOut,
-  onZoomFit,
 }: SidebarProps) {
   const adjustmentsModified = (Object.keys(DEFAULT_ADJUSTMENTS) as (keyof Adjustments)[]).some(
     (key) => Math.abs(adjustments[key] - DEFAULT_ADJUSTMENTS[key]) > 1e-6,
@@ -219,43 +208,6 @@ export function Sidebar({
               </div>
             </div>
           )}
-        </section>
-
-        <section className="panel">
-          <div className="panel-head">
-            <h2>Zoom</h2>
-            <span className="panel-note">{Math.round(zoom * 100)}%</span>
-          </div>
-          <div className="tool-row">
-            <button
-              type="button"
-              className="tool compact"
-              onClick={onZoomOut}
-              disabled={disabled}
-              title="Zoom out (-)"
-            >
-              <ZoomOut size={16} />
-            </button>
-            <button
-              type="button"
-              className="tool compact"
-              onClick={onZoomFit}
-              disabled={disabled}
-              title="Zoom to fit (0)"
-            >
-              <Maximize size={15} />
-              <span>Fit</span>
-            </button>
-            <button
-              type="button"
-              className="tool compact"
-              onClick={onZoomIn}
-              disabled={disabled}
-              title="Zoom in (+)"
-            >
-              <ZoomIn size={16} />
-            </button>
-          </div>
         </section>
       </div>
 
